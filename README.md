@@ -1,5 +1,11 @@
 # FileFlow
 
+[![CI](https://github.com/DhanaCorredor/file-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/DhanaCorredor/file-flow/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
+[![Ruff](https://img.shields.io/badge/linting-ruff-d7ff64.svg)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A safe, reversible command-line tool that organizes messy directories.
 
 Point it at a folder such as `~/Downloads` and it sorts files into categorized
