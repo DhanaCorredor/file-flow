@@ -28,10 +28,16 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 
+git config core.hooksPath .githooks   # run the quality gates before each commit
+
 pytest                           # run the test suite
 ruff check . && ruff format --check .
 mypy fileflow
 ```
+
+The hook enables the same checks CI runs, so a failing commit is caught before it
+is written rather than after it is pushed. It is opt-in because git never enables
+hooks from a clone automatically.
 
 ## License
 

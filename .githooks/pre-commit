@@ -1,0 +1,31 @@
+#!/bin/sh
+# Refuse the commit unless it passes the same gates CI enforces.
+# Enable once per clone with: git config core.hooksPath .githooks
+#
+# Deliberately a plain shell script rather than the pre-commit framework:
+# no extra dependency, and it runs the exact commands CI runs.
+
+set -e
+
+# Prefer the project virtualenv so the hook works without an activated shell.
+if [ -x ".venv/Scripts/python.exe" ]; then
+    PYTHON=".venv/Scripts/python.exe"
+elif [ -x ".venv/bin/python" ]; then
+    PYTHON=".venv/bin/python"
+else
+    PYTHON="python"
+fi
+
+fail() {
+    echo "pre-commit: $1 failed. Fix it or re-run with --no-verify to bypass." >&2
+    exit 1
+}
+
+echo "pre-commit: running quality gates"
+
+"$PYTHON" -m ruff check . || fail "lint"
+"$PYTHON" -m ruff format --check . || fail "format check"
+"$PYTHON" -m mypy fileflow || fail "type check"
+"$PYTHON" -m pytest -q || fail "tests"
+
+echo "pre-commit: all gates passed"
