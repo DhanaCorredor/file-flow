@@ -5,8 +5,6 @@
 # Deliberately a plain shell script rather than the pre-commit framework:
 # no extra dependency, and it runs the exact commands CI runs.
 
-set -e
-
 # Prefer the project virtualenv so the hook works without an activated shell.
 if [ -x ".venv/Scripts/python.exe" ]; then
     PYTHON=".venv/Scripts/python.exe"
@@ -14,10 +12,19 @@ elif [ -x ".venv/bin/python" ]; then
     PYTHON=".venv/bin/python"
 else
     PYTHON="python"
+    echo "pre-commit: no .venv found, falling back to the system python." >&2
+    echo "  A gate failing on a missing tool means: pip install -e \".[dev]\"" >&2
+fi
+
+# The gates read the working tree, not the index, so a partial commit gets checked
+# against more than it actually contains. Surface that instead of hiding it.
+if ! git diff --quiet; then
+    echo "pre-commit: unstaged changes present; the gates check the working tree," >&2
+    echo "  which is not exactly what this commit contains." >&2
 fi
 
 fail() {
-    echo "pre-commit: $1 failed. Fix it or re-run with --no-verify to bypass." >&2
+    echo "pre-commit: $1 failed. Fix it, or bypass with --no-verify." >&2
     exit 1
 }
 
