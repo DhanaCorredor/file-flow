@@ -8,12 +8,16 @@
 
 A safe, reversible command-line tool that organizes messy directories.
 
-Point it at a folder such as `~/Downloads` and it sorts files into categorized
-subfolders. It is built around three guarantees:
+> **Not usable yet.** There is no command-line interface at this point — only the
+> packaging and quality tooling. The section below states the design being built,
+> not what the code does today.
 
-- **Safe by default** — previews the plan and changes nothing unless you pass `--apply`.
-- **Reversible** — every run is journaled and can be undone with a single command.
-- **Predictable** — never overwrites a file. Name collisions are resolved, not ignored.
+Point it at a folder such as `~/Downloads` and it sorts files into categorized
+subfolders. Three properties drive the design:
+
+- **Safe by default** — preview the plan; change nothing unless `--apply` is passed.
+- **Reversible** — journal every run so it can be undone with a single command.
+- **Predictable** — never overwrite a file. Resolve name collisions instead of ignoring them.
 
 Zero runtime dependencies: the Python standard library covers everything.
 
@@ -35,9 +39,9 @@ ruff check . && ruff format --check .
 mypy fileflow
 ```
 
-The hook enables the same checks CI runs, so a failing commit is caught before it
-is written rather than after it is pushed. It is opt-in because git never enables
-hooks from a clone automatically.
+The hook runs the same checks CI runs, so a failing commit is caught before it is
+written rather than after it is pushed. It is opt-in because git never enables hooks
+from a clone automatically.
 
 ## License
 
