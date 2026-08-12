@@ -37,9 +37,17 @@ def test_unrecognised_files_fall_back_to_other(name: str) -> None:
     assert classify(Path(name)) == "Other"
 
 
-@pytest.mark.parametrize("name", ["REPORT.PDF", "Photo.JpG", "song.Mp3"])
-def test_extension_matching_ignores_case(name: str) -> None:
-    assert classify(Path(name)) != "Other"
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("REPORT.PDF", "Documents"),
+        ("Photo.JpG", "Images"),
+        ("song.Mp3", "Audio"),
+        ("CLIP.MP4", "Video"),
+    ],
+)
+def test_extension_matching_ignores_case(name: str, expected: str) -> None:
+    assert classify(Path(name)) == expected
 
 
 def test_multi_part_extension_uses_the_last_suffix() -> None:
@@ -52,11 +60,18 @@ def test_only_the_file_name_matters_not_its_directory() -> None:
 
 
 @pytest.mark.parametrize(
-    "name",
-    ["informe anual.pdf", "cañón.jpg", "résumé (final).docx", "🎵 track.mp3"],
+    ("name", "expected"),
+    [
+        ("informe anual.pdf", "Documents"),
+        ("cañón.jpg", "Images"),
+        ("résumé (final).docx", "Documents"),
+        ("🎵 track.mp3", "Audio"),
+    ],
 )
-def test_spaces_and_unicode_in_names_do_not_break_classification(name: str) -> None:
-    assert classify(Path(name)) != "Other"
+def test_spaces_and_unicode_in_names_do_not_break_classification(
+    name: str, expected: str
+) -> None:
+    assert classify(Path(name)) == expected
 
 
 def test_no_extension_is_claimed_by_two_categories() -> None:
