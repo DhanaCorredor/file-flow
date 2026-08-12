@@ -44,8 +44,14 @@ def test_unrecognised_files_are_routed_to_other(tmp_path: Path) -> None:
 
 def test_destinations_stay_inside_the_scanned_directory(tmp_path: Path) -> None:
     (tmp_path / "song.mp3").touch()
+    (tmp_path / "invoice.pdf").touch()
 
-    for move in build_plan(tmp_path):
+    plan = build_plan(tmp_path)
+
+    # Without this the loop below would pass on an empty plan, vouching for
+    # nothing.
+    assert [move.source.name for move in plan] == ["invoice.pdf", "song.mp3"]
+    for move in plan:
         assert move.destination.parent.parent == tmp_path
 
 
