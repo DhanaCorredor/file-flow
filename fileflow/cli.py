@@ -47,6 +47,32 @@ def _describe(move: Move) -> str:
     return f"{move.source.name} -> {move.destination.parent.name}/"
 
 
+def _preview(plan: list[Move]) -> int:
+    for move in plan:
+        print(_describe(move))
+    print(
+        f"\n{len(plan)} file(s) to move. Nothing was written; "
+        f"pass --apply to perform them."
+    )
+    return 0
+
+
+def _apply(plan: list[Move]) -> int:
+    run = journal.start_run()
+    skips = executor.apply_plan(plan, run)
+
+    refused = {skip.move for skip in skips}
+    for move in plan:
+        if move not in refused:
+            print(_describe(move))
+    for skip in skips:
+        print(f"skipped {skip.move.source.name}: {skip.reason}", file=sys.stderr)
+
+    print(f"\nMoved {len(plan) - len(skips)} file(s), skipped {len(skips)}.")
+    print(f"Recorded as {run.stem}. Undo it with: fileflow --undo")
+    return 0
+
+
 def _organize(directory: Path, apply: bool) -> int:
     try:
         plan = build_plan(directory)
@@ -61,27 +87,7 @@ def _organize(directory: Path, apply: bool) -> int:
         print("Nothing to organize.")
         return 0
 
-    if not apply:
-        for move in plan:
-            print(_describe(move))
-        print(
-            f"\n{len(plan)} file(s) to move. Nothing was written; "
-            f"pass --apply to perform them."
-        )
-        return 0
-
-    run = journal.start_run()
-    skips = executor.apply_plan(plan, run)
-    refused = {skip.move for skip in skips}
-    for move in plan:
-        if move not in refused:
-            print(_describe(move))
-    for skip in skips:
-        print(f"skipped {skip.move.source.name}: {skip.reason}", file=sys.stderr)
-
-    print(f"\nMoved {len(plan) - len(skips)} file(s), skipped {len(skips)}.")
-    print(f"Recorded as {run.stem}. Undo it with: fileflow --undo")
-    return 0
+    return _apply(plan) if apply else _preview(plan)
 
 
 def _undo() -> int:
