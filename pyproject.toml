@@ -25,6 +25,9 @@ classifiers = [
 # Zero runtime dependencies: the standard library covers every concern.
 dependencies = []
 
+[project.scripts]
+fileflow = "fileflow.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
