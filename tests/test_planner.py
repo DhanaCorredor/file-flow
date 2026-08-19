@@ -5,19 +5,14 @@ is that it reads a directory without altering it, and only a real directory
 can prove that.
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from fileflow.planner import Move, build_plan
 
-
-def snapshot(root: Path) -> dict[str, bytes | None]:
-    """Map every path under *root* to its contents, or None for directories."""
-    return {
-        str(path.relative_to(root)): path.read_bytes() if path.is_file() else None
-        for path in sorted(root.rglob("*"))
-    }
+Snapshot = Callable[[Path], dict[str, bytes | None]]
 
 
 def test_empty_directory_yields_no_moves(tmp_path: Path) -> None:
@@ -116,7 +111,9 @@ def test_the_plan_is_sorted_and_reproducible(tmp_path: Path) -> None:
     assert build_plan(tmp_path) == plan
 
 
-def test_building_a_plan_does_not_change_the_directory(tmp_path: Path) -> None:
+def test_building_a_plan_does_not_change_the_directory(
+    tmp_path: Path, snapshot: Snapshot
+) -> None:
     (tmp_path / "invoice.pdf").write_bytes(b"pdf")
     (tmp_path / "mystery.xyz").write_bytes(b"?")
     (tmp_path / ".hidden").write_bytes(b"secret")

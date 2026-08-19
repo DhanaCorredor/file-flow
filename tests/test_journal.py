@@ -1,23 +1,14 @@
 """Tests for the run journal.
 
-``JOURNAL_DIR`` is redirected at ``tmp_path`` throughout: a test suite that
-wrote to the real home directory would be exactly the kind of surprise this
-tool exists to avoid.
+``JOURNAL_DIR`` is redirected at ``tmp_path`` by the autouse fixture in
+``conftest``: a test suite that wrote to the real home directory would be
+exactly the kind of surprise this tool exists to avoid.
 """
 
 from pathlib import Path
 
-import pytest
-
 from fileflow import journal
 from fileflow.planner import Move
-
-
-@pytest.fixture(autouse=True)
-def journal_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    directory = tmp_path / "journal"
-    monkeypatch.setattr(journal, "JOURNAL_DIR", directory)
-    return directory
 
 
 def test_a_recorded_move_reads_back_unchanged(tmp_path: Path) -> None:
