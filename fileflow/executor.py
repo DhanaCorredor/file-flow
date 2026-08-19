@@ -68,10 +68,17 @@ def undo(moves: list[Move]) -> list[Skip]:
             continue
         shutil.move(move.destination, move.source)
 
-    # A category folder left behind empty would make the tree differ from the
-    # one the run started with. Only empty ones go: anything still holding a
-    # file is the user's business, not ours.
+    _remove_emptied_folders(moves)
+    return skips
+
+
+def _remove_emptied_folders(moves: list[Move]) -> None:
+    """Delete the category folders a revert left empty.
+
+    One left behind would make the tree differ from the one the run started
+    with. Only empty ones go: a folder still holding a file is the user's
+    business, not ours.
+    """
     for folder in {move.destination.parent for move in moves}:
         if folder.is_dir() and not any(folder.iterdir()):
             folder.rmdir()
-    return skips
