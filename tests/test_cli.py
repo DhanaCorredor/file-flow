@@ -1,9 +1,11 @@
 """Tests for the command line tool, driven through ``main`` end to end.
 
-The journal is redirected at ``tmp_path`` so no test can write to the real
-home directory, and every run works on a real temporary tree.
+The journal is redirected at ``tmp_path`` by the autouse fixture in
+``conftest``, so no test can write to the real home directory, and every run
+works on a real temporary tree.
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -13,12 +15,7 @@ from fileflow.cli import main
 
 USAGE_ERROR = 2
 
-
-@pytest.fixture(autouse=True)
-def journal_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    directory = tmp_path / "journal"
-    monkeypatch.setattr(journal, "JOURNAL_DIR", directory)
-    return directory
+Snapshot = Callable[[Path], dict[str, bytes | None]]
 
 
 @pytest.fixture
@@ -32,15 +29,7 @@ def messy(tmp_path: Path) -> Path:
     return directory
 
 
-def snapshot(root: Path) -> dict[str, bytes | None]:
-    """Map every path under *root* to its contents, or None for directories."""
-    return {
-        str(path.relative_to(root)): path.read_bytes() if path.is_file() else None
-        for path in sorted(root.rglob("*"))
-    }
-
-
-def test_a_dry_run_changes_nothing_on_disk(messy: Path) -> None:
+def test_a_dry_run_changes_nothing_on_disk(messy: Path, snapshot: Snapshot) -> None:
     before = snapshot(messy)
 
     assert main([str(messy)]) == 0
@@ -137,7 +126,9 @@ def test_undo_with_a_directory_is_a_usage_error(messy: Path) -> None:
     assert exit_info.value.code == USAGE_ERROR
 
 
-def test_undo_restores_the_directory_byte_for_byte(messy: Path) -> None:
+def test_undo_restores_the_directory_byte_for_byte(
+    messy: Path, snapshot: Snapshot
+) -> None:
     before = snapshot(messy)
 
     main([str(messy), "--apply"])
