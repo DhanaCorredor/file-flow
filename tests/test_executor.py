@@ -7,7 +7,8 @@ the list here keeps each test independent of how directory entries sort.
 
 from pathlib import Path
 
-from fileflow.executor import Skip, apply_plan
+from fileflow import journal
+from fileflow.executor import Skip, apply_plan, undo
 from fileflow.planner import Move, build_plan
 
 
@@ -127,6 +128,91 @@ def test_a_zero_byte_file_is_moved(tmp_path: Path) -> None:
     apply_plan([Move(source, tmp_path / "Documents" / "empty.pdf")])
 
     assert (tmp_path / "Documents" / "empty.pdf").stat().st_size == 0
+
+
+def test_a_completed_move_is_written_to_the_journal(tmp_path: Path) -> None:
+    source = tmp_path / "invoice.pdf"
+    source.write_bytes(b"pdf")
+    move = Move(source, tmp_path / "Documents" / "invoice.pdf")
+    run = tmp_path / "run.jsonl"
+
+    apply_plan([move], run)
+
+    assert journal.read_run(run) == [move]
+
+
+def test_a_refused_move_is_not_written_to_the_journal(tmp_path: Path) -> None:
+    (tmp_path / "Documents").mkdir()
+    (tmp_path / "Documents" / "invoice.pdf").write_bytes(b"already here")
+    (tmp_path / "invoice.pdf").write_bytes(b"incoming")
+    run = tmp_path / "run.jsonl"
+    run.touch()
+
+    apply_plan(
+        [Move(tmp_path / "invoice.pdf", tmp_path / "Documents" / "invoice.pdf")], run
+    )
+
+    assert journal.read_run(run) == []
+
+
+def test_undo_puts_a_moved_file_back(tmp_path: Path) -> None:
+    source = tmp_path / "invoice.pdf"
+    source.write_bytes(b"pdf")
+    move = Move(source, tmp_path / "Documents" / "invoice.pdf")
+    apply_plan([move])
+
+    assert undo([move]) == []
+    assert source.read_bytes() == b"pdf"
+
+
+def test_undo_removes_the_category_folder_it_emptied(tmp_path: Path) -> None:
+    move = Move(tmp_path / "invoice.pdf", tmp_path / "Documents" / "invoice.pdf")
+    move.source.write_bytes(b"pdf")
+    apply_plan([move])
+
+    undo([move])
+
+    assert not (tmp_path / "Documents").exists()
+
+
+def test_undo_keeps_a_category_folder_that_still_holds_a_file(
+    tmp_path: Path,
+) -> None:
+    move = Move(tmp_path / "invoice.pdf", tmp_path / "Documents" / "invoice.pdf")
+    move.source.write_bytes(b"pdf")
+    apply_plan([move])
+    (tmp_path / "Documents" / "unrelated.pdf").write_bytes(b"mine")
+
+    undo([move])
+
+    assert (tmp_path / "Documents" / "unrelated.pdf").read_bytes() == b"mine"
+
+
+def test_undo_skips_a_file_that_is_no_longer_where_the_run_left_it(
+    tmp_path: Path,
+) -> None:
+    move = Move(tmp_path / "invoice.pdf", tmp_path / "Documents" / "invoice.pdf")
+    move.source.write_bytes(b"pdf")
+    apply_plan([move])
+    move.destination.unlink()
+
+    assert undo([move]) == [Skip(move, "no longer where the run left it")]
+
+
+def test_undo_refuses_to_overwrite_a_retaken_original_path(tmp_path: Path) -> None:
+    move = Move(tmp_path / "invoice.pdf", tmp_path / "Documents" / "invoice.pdf")
+    move.source.write_bytes(b"pdf")
+    apply_plan([move])
+    move.source.write_bytes(b"a new file with the same name")
+
+    assert undo([move]) == [Skip(move, "its original path is taken again")]
+    assert move.source.read_bytes() == b"a new file with the same name"
+    assert move.destination.read_bytes() == b"pdf"
+
+
+def test_undo_of_an_empty_run_does_nothing(tmp_path: Path) -> None:
+    assert undo([]) == []
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_a_planned_run_moves_every_loose_file(tmp_path: Path) -> None:
